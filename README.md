@@ -12,16 +12,16 @@ Check out our [Wiki](wiki.md) to learn how to run TASC interactively.
 
 
 
-<img src="www/images/lab_logo.png"
+<img src="www/images/temporary_logo.png"
         alt="Genomic Architecture of Cancer Lab"/>
 
 ### Genomic Architecture of Cancer Lab
 #### Dr. Francesco Boccalatte, PhD  
 <div style="display: flex; align-items: center; justify-content: space-between;">
   <span> Visit our
-    <a href="www/images/temporary_logo.png" target="_blank" style="text-decoration: none">
+    <a href="www.link to website" target="_blank" style="text-decoration: none">
     website
     </a>
   </span>
-  <img src="www/images/irccs_logo.png" alt="Markdown Monster icon" style="height: 100px;"/>
+  <img src="www/images/irccs_logo.png" alt="IRCCS logo" align="right" style="height: 100px;"/>
 </div>
