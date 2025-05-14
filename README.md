@@ -12,7 +12,7 @@ Check out our [Wiki](wiki.md) to learn how to run TASC interactively.
 
 
 
-<img src="www/images/temporary_logo.png"
+<img src="www/images/temporary_logo.png" align="left" style="height: 200px:"
         alt="Genomic Architecture of Cancer Lab"/>
 
 ### Genomic Architecture of Cancer Lab
@@ -23,5 +23,5 @@ Check out our [Wiki](wiki.md) to learn how to run TASC interactively.
     website
     </a>
   </span>
-  <img src="www/images/irccs_logo.png" alt="IRCCS logo" align="right" style="height: 100px;"/>
+  <img src="www/images/irccs_logo.png" alt="IRCCS logo" align="right" style="height: 200px;"/>
 </div>
