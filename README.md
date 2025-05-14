@@ -6,7 +6,10 @@ Run our ShinyApp for an interactive and reproducible framework to classify your 
 Check out our [Wiki](wiki.md) to learn how to run TASC interactively.
 
 ### Authors
-[Cinzia Benetti](cinzia.benetti@ircc.com), [Omar Almolla](omar.almolla@ircc.com)
+[Cinzia Benetti](mailto:cinzia.benetti@ircc.com), [Omar Almolla](mailto:omar.almolla@ircc.com)
+
+
+
 
 
 
