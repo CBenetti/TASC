@@ -1,5 +1,5 @@
 # TASC
-<img src="www/images/logo.png" />
+<img src="www/images/logo.png" align="center" height="280" width="auto"/>
 
 ## T cell Acute Lymphoblastic Leukemia (ALL) Subtype Classifier
 
