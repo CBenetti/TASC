@@ -12,8 +12,7 @@ Check out our [Wiki](wiki.md) to learn how to run TASC interactively.
 
 
 
-<img src="www/images/temporary_logo.png" align="left" style="height: 200px:"
-        alt="Genomic Architecture of Cancer Lab"/>
+<img src="www/images/temporary_logo.png" align="left" height="200" width="auto" alt="Genomic Architecture of Cancer Lab"/>
 
 ### Genomic Architecture of Cancer Lab
 #### Dr. Francesco Boccalatte, PhD  
