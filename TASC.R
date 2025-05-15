@@ -60,7 +60,7 @@ ui <- fluidPage(
     column(8, offset = 2,
            div(class = "about-box",
 	   style = "margin-top: 0px;",
-               HTML("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations.")
+               HTML("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/wiki.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us.")
            )
     )
   ),
@@ -73,7 +73,7 @@ ui <- fluidPage(
                fluidRow(
                  column(6,
                         selectInput("inputSource", "Source of count matrix:",
-                                    choices = c("Select..." = "", "Salmon" = "salmon", "featureCounts" = "featureCounts"),
+                                    choices = c("Select..." = "", "Salmon" = "salmon", "featureCounts" = "featureCounts", "Custom format"="custom"),
                                     width = "100%")
                  ),
                  column(6,
@@ -125,6 +125,12 @@ ui <- fluidPage(
                       uiOutput("Imputation_alert"),
                       downloadButton("downloadGenes", "Download Imputed Gene List")
                )
+             ),
+		br(),
+             fluidRow(
+               column(12,
+                      downloadButton("downloadProbabilities", "Download the complete table of probabilities")
+               )
              )
   )),
   
@@ -154,7 +160,7 @@ server <- function(input, output, session) {
     numeric_counts <- switch(input$inputSource,
                              "featureCounts" = counts[, -(1:6)],
                              "salmon" = counts[,-c(1:2)],
-                             counts[, -1])
+                             "custom" = counts[, -1])
     list(counts = numeric_counts, gene_ids = gene_ids)
   })
   
@@ -223,7 +229,8 @@ server <- function(input, output, session) {
       pca_temp$metagene <- metagenes
       class_corrected <- pca_coord$class
       names(class_corrected) <- rownames(pca_coord)
-      meta_plots[[sig]] <- ggplot(pca_temp, aes(PC1, PC2, color = metagene, label = rownames(pca_temp))) +
+	if(length(which(genes%in%gene_ids==T))>(length(genes)/2)){
+	 meta_plots[[sig]] <- ggplot(pca_temp, aes(PC1, PC2, color = metagene, label = rownames(pca_temp))) +
         geom_point(size = 3) +
         geom_text_repel(
           color = "black",
@@ -239,9 +246,7 @@ server <- function(input, output, session) {
           nudge_y = 15,                    # sposta le etichette verso l'alto
           show.legend = FALSE
         )  +
-        scale_color_gradient2(low = "purple", mid = "black", high = "yellow",
-                              midpoint = mean(pca_temp$metagene),
-                              name = paste(sig, "metagene")) +
+	scale_color_scico(palette="turku",midpoint=mean(pca_temp$metagene),name=paste(sig, "metagene"))+
         coord_fixed() +
 	theme_minimal(base_size=14)+
         theme(plot.title = element_text(size = 20, face = "bold"),panel.border = element_rect(color = "black", fill = NA, size = 1)) +
@@ -249,12 +254,13 @@ server <- function(input, output, session) {
              x = paste0("PC1 (", round(summary(prcomp(t(vst_data)))$importance[2, 1] * 100, 1), "%)"),
              y = paste0("PC2 (", round(summary(prcomp(t(vst_data)))$importance[2, 2] * 100, 1), "%)"))+facet_wrap(vars(class))+
 	theme(plot.margin = grid::unit(c(30, 10, 30, 10), "pt"))
-
+	}else{meta_plots[[sig]]<-sig}
     }
     
     structure(list(
       class = class_corrected,
       p = p,
+      prob = class_p,
       imp = missing_genes,
       plot_data = p,
       meta_plots = meta_plots
@@ -292,25 +298,68 @@ server <- function(input, output, session) {
   
   output$imputedGenes <- renderPrint({ result()$imp })
   
-  output$metaPlots <- renderUI({
-    lapply(names(result()$meta_plots), function(name) {
-      column(width = 12, align = "center",
-             plotOutput(outputId = paste0("meta_plot_", name), height = "800px"))
-    }) |> tagList()
-  })
-  
-  observe({
-    plots <- result()$meta_plots
-    lapply(names(plots), function(name) {
-      output[[paste0("meta_plot_", name)]] <- renderPlot({ plots[[name]] })
+output$metaPlots <- renderUI({
+    req(result()$meta_plots)          # do nothing until meta_plots is non-NULL
+    pl <- result()$meta_plots         # now safe to grab the list
+
+    # build one UI element per entry
+    ui_list <- lapply(names(pl), function(name) {
+      output_id <- paste0("meta_plot_", name)
+      plot_obj  <- pl[[name]]
+
+      if (inherits(plot_obj, "ggplot")) {
+        column(
+          width = 12, align = "center",
+          plotOutput(output_id, height = "800px")
+        )
+      } else {
+        column(
+          width = 12, align = "center",
+          div(
+            class = "alert alert-warning",
+            paste0(
+              "Impossible to calculate metagene for “", name,
+              "”: not enough signature genes found in your dataset."
+            )
+          )
+        )
+      }
     })
+
+    do.call(tagList, ui_list)
   })
-  
+
+
+  # 2) observeEvent on the same meta_plots—register one renderPlot per ggplot
+  observeEvent(result()$meta_plots, {
+    pl <- result()$meta_plots
+
+    # loop and assign each to output[[...]] in its own local() closure
+    for (name in names(pl)) {
+      local({
+        nm   <- name
+        p_obj <- pl[[nm]]
+        out_id <- paste0("meta_plot_", nm)
+
+        output[[out_id]] <- renderPlot({
+          p_obj
+        })
+      })
+    }
+  })  
   output$downloadPred <- downloadHandler(
     filename = function() paste0("class_predictions_", Sys.Date(), ".tsv"),
     content = function(file) {
       write.table(data.frame(Sample = names(result()$class), Prediction = result()$class),
                   file, sep = "\t", row.names = FALSE, quote = FALSE)
+    }
+  )
+
+  output$downloadProbabilities <- downloadHandler(
+    filename = function() paste0("full_probability_matrix", Sys.Date(), ".tsv"),
+    content = function(file) {
+      write.table(as.data.frame(result()$prob),
+                  file, sep = "\t", row.names = TRUE, col.names=NA, quote = FALSE)
     }
   )
   
@@ -330,7 +379,7 @@ server <- function(input, output, session) {
     filename = function() paste0("metagene_plots_", Sys.Date(), ".pdf"),
     content = function(file) {
       pdf(file, width = 10, height = 6)
-      lapply(result()$meta_plots, print)
+      lapply(result()$meta_plots, function(x){if(is.character(x)){NULL}else{print(x)}})
       dev.off()
     }
   )
