@@ -19,6 +19,7 @@
 	library(shiny)
 	library(shinyjs)
 	library(ggplot2)
+	library(scico)
 	library(ggrepel)
 	library(plotly)
 	library(DESeq2)
@@ -199,6 +200,7 @@ server <- function(input, output, session) {
     
     class_tmp <- predict(model$rf, newdata = t(vst_sub))
     class_p <- predict(model$rf, newdata = t(vst_sub),type="prob")
+    colnames(class_p)<-gsub("B:SAMP:subtype_","",colnames(class_p))
     class <- class_tmp
     class[which(class_p[,grep("LMO2",colnames(class_p))]>model$threshold)]<-"B:SAMP:subtype_LMO2 γδ-like"
     cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
