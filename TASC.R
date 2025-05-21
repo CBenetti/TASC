@@ -26,6 +26,7 @@
 	library(randomForest)
 	library(DT)
 	library(bslib)
+	result_env <- new.env()
 
 options(shiny.maxRequestSize = 200*1024^2)  # 100 MB
 
@@ -96,6 +97,14 @@ ui <- fluidPage(
   
   hidden(div(id = "results_section",
              fluidRow(
+               column(12,
+                      hr(),
+                      uiOutput("Imputation_alert"),
+                      downloadButton("downloadGenes", "Download Imputed Gene List")
+               )
+             ),
+		br(),
+             fluidRow(
                column(6,
                       div(class = "section-title", "Predicted Classes"),
                       card(
@@ -113,21 +122,28 @@ ui <- fluidPage(
                       )
                )
              ),
-             fluidRow(
+     
+	fluidRow(
                column(12,
                       div(class = "section-title", "Metagene Feature Plots"),
                       uiOutput("metaPlots"),
                       downloadButton("downloadMetaPlots", "Download Metagene Plots (PDF)")
                )
              ),
-             fluidRow(
-               column(12,
-                      hr(),
-                      uiOutput("Imputation_alert"),
-                      downloadButton("downloadGenes", "Download Imputed Gene List")
-               )
-             ),
-		br(),
+	fluidRow(
+  column(12,
+    div(class = "section-title", "Explore Signature on Demand"),
+    selectInput("manual_sig", "Choose a Signature Class:",
+                choices = c("Select a class..." = ""), width = "50%"),
+    conditionalPanel(
+      condition = "input.manual_sig != ''",
+      plotOutput("manualMetaPlot", height = "800px"),
+      br(),
+    downloadButton("downloadManualMetaPlot", "Download Metagene Plot")	
+    )
+  )
+),
+
              fluidRow(
                column(12,
                       downloadButton("downloadProbabilities", "Download the complete table of probabilities")
@@ -143,9 +159,14 @@ ui <- fluidPage(
 
 # === SERVER ===
 server <- function(input, output, session) {
+	load("data/unique_signatures.rda")
   observeEvent(result(), {
     shinyjs::hide("waiting_message")
     shinyjs::show("results_section")
+    updateSelectInput(session, "manual_sig",
+     choices = c("Select a class..." = "",gsub("B:SAMP:subtype_","",sort(unique(unlist(unique_signatures[, 3]))[-1])))
+)
+
   })
   
   processedCounts <- reactive({
@@ -202,7 +223,7 @@ server <- function(input, output, session) {
     class_p <- predict(model$rf, newdata = t(vst_sub),type="prob")
     colnames(class_p)<-gsub("B:SAMP:subtype_","",colnames(class_p))
     class <- class_tmp
-    class[which(class_p[,grep("LMO2",colnames(class_p))]>model$threshold)]<-"B:SAMP:subtype_LMO2 γδ-like"
+    class[which(class_p[,grep("LMO2",colnames(class_p))]>model$threshold & class=="B:SAMP:subtype_ETP-like")]<-"B:SAMP:subtype_LMO2 γδ-like"
     cbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442",
                    "#0072B2", "#D55E00", "#CC79A7", "#999933", "#CC6666",
                    "#339933", "#9966CC", "#66CCEE")
@@ -248,7 +269,7 @@ server <- function(input, output, session) {
           nudge_y = 15,                    # sposta le etichette verso l'alto
           show.legend = FALSE
         )  +
-	scale_color_scico(palette="turku",midpoint=mean(pca_temp$metagene),name=paste(sig, "metagene"))+
+	scale_color_scico(palette="buda",midpoint=mean(pca_temp$metagene),name=paste(sig, "metagene"))+
         coord_fixed() +
 	theme_minimal(base_size=14)+
         theme(plot.title = element_text(size = 20, face = "bold"),panel.border = element_rect(color = "black", fill = NA, size = 1)) +
@@ -258,7 +279,11 @@ server <- function(input, output, session) {
 	theme(plot.margin = grid::unit(c(30, 10, 30, 10), "pt"))
 	}else{meta_plots[[sig]]<-sig}
     }
-    
+	result_env$vst_data <- vst_data
+	result_env$pca_coord <- pca_coord
+	result_env$gene_ids <- rownames(vst_data)
+
+
     structure(list(
       class = class_corrected,
       p = p,
@@ -269,18 +294,69 @@ server <- function(input, output, session) {
     ), model_genes = model$subset_genes)
   })
   
-  output$classTable <- renderDT({
-    req(result())
-    df <- data.frame(Sample = names(result()$class), Prediction = result()$class)
-    datatable(df, extensions = 'Buttons',
-              options = list(dom = 'Blfrtip', buttons = list('copy', 'csv', 'excel', 'pdf', 'print'), pageLength = 15),
-              rownames = FALSE)
-  })
-  
+#  output$classTable <- renderDT({
+#    req(result())
+#    df <- data.frame(Sample = names(result()$class), Prediction = result()$class)
+#    datatable(df, extensions = 'Buttons',
+#              options = list(dom = 'Blfrtip', buttons = list('copy', 'csv', 'excel', 'pdf', 'print'), pageLength = 15),
+#              rownames = FALSE)
+#  })
+ 
+output$classTable <- renderDT({
+  req(result())
+  df <- data.frame(Sample = names(result()$class), Prediction = result()$class)
+  datatable(df,
+    extensions = 'Buttons',
+    options = list(
+      dom = 'Blfrtip',
+      buttons = list(
+        list(
+          extend = 'copy',
+          text = 'Copy'
+        ),
+        list(
+          extend = 'csv',
+          text = 'CSV',
+          filename = JS("function() {
+            let d = new Date();
+            let timestamp = d.toISOString().replace(/[:.]/g, '-');
+            return 'TASC_class_predictions_' + timestamp;
+          }")
+        ),
+        list(
+          extend = 'excel',
+          text = 'Excel',
+          filename = JS("function() {
+            let d = new Date();
+            let timestamp = d.toISOString().replace(/[:.]/g, '-');
+            return 'TASC_class_predictions_' + timestamp;
+          }")
+        ),
+        list(
+          extend = 'pdf',
+          text = 'PDF',
+          filename = JS("function() {
+            let d = new Date();
+            let timestamp = d.toISOString().replace(/[:.]/g, '-');
+            return 'TASC_class_predictions_' + timestamp;
+          }")
+        ),
+        list(
+          extend = 'print',
+          text = 'Print'
+        )
+      ),
+      pageLength = 15
+    ),
+    rownames = FALSE
+  )
+})
+ 
   output$pcaPlot <- renderPlotly({ ggplotly(result()$p) })
   
   output$Imputation_alert <- renderUI({
     res <- result()
+    readRDS("data/top_30.rds")->top30
     imp_genes <- res$imp
     model_genes <- attr(res, "model_genes")
     if (is.null(model_genes)) return(NULL)
@@ -293,6 +369,10 @@ server <- function(input, output, session) {
         if (imp_ratio > 0.10) {
           tags$p("⚠️ More than 10% of genes were imputed using model-based mean & std dev",
                  style = "color: red; font-weight: bold; font-size: 16px;")
+        },
+	if (length(which(imp_genes%in%top30)) > 0) {
+        tags$p("⚠️ Some of the imputed genes are among the top 30 important features!",
+               style = "color: darkorange; font-weight: bold; font-size: 16px;")
         }
       )
     }
@@ -349,6 +429,7 @@ output$metaPlots <- renderUI({
       })
     }
   })  
+
   output$downloadPred <- downloadHandler(
     filename = function() paste0("class_predictions_", Sys.Date(), ".tsv"),
     content = function(file) {
@@ -385,8 +466,116 @@ output$metaPlots <- renderUI({
       dev.off()
     }
   )
-}
+  output$manualMetaUI <- renderUI({
+  req(input$manual_sig)
+  plotname <- paste0("manual_plot_", input$manual_sig)
+  uiOutput(plotname)
+  })
 
+output$manualMetaPlot <- renderPlot({
+  req(result(), input$manual_sig)
+
+  sig <- paste0("B:SAMP:subtype_", input$manual_sig)
+  vst_data <- result_env$vst_data
+  pca_coord <- result_env$pca_coord
+  gene_ids <- result_env$gene_ids
+
+  genes <- unique_signatures[unique_signatures[, 3] == sig, 2]
+  found_genes <- which(genes %in% gene_ids)
+
+  if (length(found_genes) <= (length(genes) * 2 / 3)) {
+    plot.new()
+    text(0.5, 0.5, paste("⚠️ Not enough signature genes for", input$manual_sig), cex = 1.5)
+    return()
+  }
+
+  metagenes <- apply(vst_data, 2, function(x) mean(x[na.omit(match(genes, rownames(vst_data)))]))
+  pca_temp <- pca_coord
+  pca_temp$metagene <- metagenes
+
+  ggplot(pca_temp, aes(PC1, PC2, color = metagene, label = rownames(pca_temp))) +
+    geom_point(size = 3) +
+    geom_text_repel(
+      color = "black", size = 4, box.padding = unit(1, "lines"),
+      point.padding = unit(1.5, "lines"), force = 10, force_pull = 0.1,
+      max.overlaps = Inf, segment.color = "grey50", segment.curvature = -0.1,
+      segment.ncp = 3, nudge_y = 15, show.legend = FALSE
+    ) +
+    scale_color_scico(palette = "buda", midpoint = mean(pca_temp$metagene),
+                      name = paste(input$manual_sig, "metagene")) +
+    coord_fixed() +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(size = 20, face = "bold"),
+      panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+      plot.margin = grid::unit(c(30, 10, 30, 10), "pt")
+    ) +
+    labs(
+      title = paste("Feature plot of", input$manual_sig, "signature"),
+      x = paste0("PC1 (", round(summary(prcomp(t(vst_data)))$importance[2, 1] * 100, 1), "%)"),
+      y = paste0("PC2 (", round(summary(prcomp(t(vst_data)))$importance[2, 2] * 100, 1), "%)")
+    ) +
+    facet_wrap(vars(class))
+})
+output$downloadManualMetaPlot <- downloadHandler(
+  filename = function() {
+    paste0("metagene_plot_", input$manual_sig, "_", Sys.Date(), ".pdf")
+  },
+  content = function(file) {
+    sig <- paste0("B:SAMP:subtype_", input$manual_sig)
+    vst_data <- result_env$vst_data
+    pca_coord <- result_env$pca_coord
+    gene_ids <- result_env$gene_ids
+
+    genes <- unique_signatures[unique_signatures[, 3] == sig, 2]
+    found_genes <- which(genes %in% gene_ids)
+
+    if (length(found_genes) <= (length(genes) * 2 / 3)) {
+      pdf(file)
+      plot.new()
+      text(0.5, 0.5, paste("⚠️ Not enough signature genes for", input$manual_sig), cex = 1.5)
+      dev.off()
+      return()
+    }
+
+    metagenes <- apply(vst_data, 2, function(x) mean(x[na.omit(match(genes, rownames(vst_data)))]))
+    pca_temp <- pca_coord
+    pca_temp$metagene <- metagenes
+
+    pdf(file, width = 10, height = 6)
+    print(
+      ggplot(pca_temp, aes(PC1, PC2, color = metagene, label = rownames(pca_temp))) +
+        geom_point(size = 3) +
+        geom_text_repel(
+          color = "black", size = 4,
+          box.padding = unit(1, "lines"),
+          point.padding = unit(1.5, "lines"),
+          force = 10, force_pull = 0.1,
+          max.overlaps = Inf, segment.color = "grey50",
+          segment.curvature = -0.1, segment.ncp = 3, nudge_y = 15,
+          show.legend = FALSE
+        ) +
+        scale_color_scico(palette = "buda", midpoint = mean(pca_temp$metagene),
+                          name = paste(input$manual_sig, "metagene")) +
+        coord_fixed() +
+        theme_minimal(base_size = 14) +
+        theme(
+          plot.title = element_text(size = 20, face = "bold"),
+          panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+          plot.margin = grid::unit(c(30, 10, 30, 10), "pt")
+        ) +
+        labs(
+          title = paste("Feature plot of", input$manual_sig, "signature"),
+          x = paste0("PC1 (", round(summary(prcomp(t(vst_data)))$importance[2, 1] * 100, 1), "%)"),
+          y = paste0("PC2 (", round(summary(prcomp(t(vst_data)))$importance[2, 2] * 100, 1), "%)")
+        ) +
+        facet_wrap(vars(class))
+    )
+    dev.off()
+  }
+)
+
+}
 shinyApp(ui, server)
 
 
