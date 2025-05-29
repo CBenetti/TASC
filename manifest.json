@@ -3064,12 +3064,12 @@
     },
     "zlibbioc": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.20/bioc",
+      "Repository": "https://bioconductor.org/packages/3.18/bioc",
       "description": {
         "Package": "zlibbioc",
         "Type": "Package",
         "Title": "An R packaged zlib-1.2.5",
-        "Version": "1.50.0",
+        "Version": "1.48.0",
         "Author": "Martin Morgan",
         "Maintainer": "Bioconductor Package Maintainer <maintainer@bioconductor.org>",
         "Description": "This package uses the source code of zlib-1.2.5 to create\n  libraries for systems that do not have these available via other\n  means (most Linux and Mac users should have system-level access to\n  zlib, and no direct need for this package). See the vignette for\n  instructions on use.",
@@ -3084,7 +3084,7 @@
         "git_branch": "RELEASE_3_19",
         "git_last_commit": "0cb52e8",
         "git_last_commit_date": "2024-04-30",
-        "Repository": "Bioconductor 3.19",
+        "Repository": "Bioconductor 3.18",
         "Date/Publication": "2024-04-30",
         "NeedsCompilation": "yes",
         "Packaged": "2024-05-01 06:36:48 UTC; biocbuild",
