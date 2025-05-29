@@ -193,18 +193,19 @@ server <- function(input, output, session) {
     gene_ids <- pc$gene_ids
     load("data/random_forest_model.rda")
     load("data/unique_signatures.rda")
-    
+withProgress(message = "Processing input file...", value = 0, {
     DGE_OBJ <- DESeqDataSetFromMatrix(round(counts), design = ~0,
                                       rowData = data.frame(gene_id = gene_ids),
                                       colData = data.frame(samples = colnames(counts)))
     vst_data <- assay(vst(DGE_OBJ, blind = TRUE))
     rownames(vst_data) <- sub("\\..*", "", gene_ids)
-    colnames(vst_data) <- DGE_OBJ$samples
-    
+   colnames(vst_data) <- DGE_OBJ$samples
+})    
     gen <- sub("\\..*", "", model$subset_genes)
     missing_genes <- gen[!gen %in% rownames(vst_data)]
     
     if (length(missing_genes) > 0) {
+withProgress(message = "Performing gene imputation...", value = 0, {    
       idx <- which(!gen %in% rownames(vst_data))
       sd_imput <- apply(model$original_data_matrix[model$subset_genes[idx], ], 1, sd)
       mean_imput <- apply(model$original_data_matrix[model$subset_genes[idx], ], 1, mean)
@@ -213,12 +214,13 @@ server <- function(input, output, session) {
       colnames(sub) <- colnames(vst_data)
       vst_sub <- rbind(vst_data, sub)[gen, ]
       rownames(vst_sub) <- model$subset_genes
+})
     } else {
       vst_sub <- vst_data[gen, ]
       rownames(vst_sub) <- model$subset_genes
     }
 
-    
+  withProgress(message = "Performing predictions...", value = 0, {  
     class_tmp <- predict(model$rf, newdata = t(vst_sub))
     class_p <- predict(model$rf, newdata = t(vst_sub),type="prob")
     colnames(class_p)<-gsub("B:SAMP:subtype_","",colnames(class_p))
@@ -231,7 +233,7 @@ server <- function(input, output, session) {
     
     pca_coord <- as.data.frame(prcomp(t(vst_data))$x)
     pca_coord$class <- gsub("B:SAMP:subtype_", "", as.vector(class))
-    
+  })  
     p <- ggplot(pca_coord, aes(PC1, PC2, color = class, label = rownames(pca_coord))) +
       geom_point(size = 3) +
       geom_label_repel(color = "black", show.legend = FALSE) +
