@@ -33,8 +33,8 @@
       }
     },
     "Biobase": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "Biobase",
         "Title": "Biobase: Base functions for Bioconductor",
@@ -65,8 +65,8 @@
       }
     },
     "BiocGenerics": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "BiocGenerics",
         "Title": "S4 generic functions used in Bioconductor",
@@ -121,8 +121,8 @@
       }
     },
     "BiocParallel": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "BiocParallel",
         "Type": "Package",
@@ -157,8 +157,8 @@
       }
     },
     "DESeq2": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "DESeq2",
         "Type": "Package",
@@ -217,8 +217,8 @@
       }
     },
     "DelayedArray": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "DelayedArray",
         "Title": "A unified framework for working transparently with on-disk and\nin-memory array-like datasets",
@@ -250,8 +250,8 @@
       }
     },
     "GenomeInfoDb": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "GenomeInfoDb",
         "Title": "Utilities for manipulating chromosome names, including modifying\nthem to follow a particular naming style",
@@ -284,7 +284,7 @@
     },
     "GenomeInfoDbData": {
       "Source": "Bioconductor",
-      "Repository": null,
+      "Repository": "https://bioconductor.org/packages/3.20/data/annotation/src/contrib",
       "description": {
         "Package": "GenomeInfoDbData",
         "Title": "Species and taxonomy ID look up tables used by GenomeInfoDb",
@@ -301,8 +301,8 @@
       }
     },
     "GenomicRanges": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "GenomicRanges",
         "Title": "Representation and manipulation of genomic intervals",
@@ -334,8 +334,8 @@
       }
     },
     "IRanges": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "IRanges",
         "Title": "Foundation of integer range manipulation in Bioconductor",
@@ -428,8 +428,8 @@
       }
     },
     "MatrixGenerics": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "MatrixGenerics",
         "Title": "S4 Generic Summary Statistic Functions that Operate on\nMatrix-Like Objects",
@@ -562,8 +562,8 @@
       }
     },
     "S4Arrays": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "S4Arrays",
         "Title": "Foundation of array-like containers in Bioconductor",
@@ -595,8 +595,8 @@
       }
     },
     "S4Vectors": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "S4Vectors",
         "Title": "Foundation of vector-like and list-like containers in\nBioconductor",
@@ -626,8 +626,8 @@
       }
     },
     "SparseArray": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "SparseArray",
         "Title": "High-performance sparse data representation and manipulation in\nR",
@@ -659,8 +659,8 @@
       }
     },
     "SummarizedExperiment": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "SummarizedExperiment",
         "Title": "SummarizedExperiment container",
@@ -691,8 +691,8 @@
       }
     },
     "UCSC.utils": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "UCSC.utils",
         "Title": "Low-level utilities to retrieve data from the UCSC Genome\nBrowser",
@@ -722,8 +722,8 @@
       }
     },
     "XVector": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "XVector",
         "Title": "Foundation of external vector representation and manipulation in\nBioconductor",
@@ -3063,8 +3063,8 @@
       }
     },
     "zlibbioc": {
-      "Source": "Bioconductor 3.19",
-      "Repository": null,
+      "Source": "BioCsoft",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "zlibbioc",
         "Type": "Package",
