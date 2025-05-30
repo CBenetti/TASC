@@ -571,7 +571,7 @@
         "biocViews": "Infrastructure, DataRepresentation",
         "URL": "https://bioconductor.org/packages/S4Arrays",
         "BugReports": "https://github.com/Bioconductor/S4Arrays/issues",
-        "Version": "1.4.1",
+        "Version": "1.6.0",
         "License": "Artistic-2.0",
         "Encoding": "UTF-8",
         "Authors@R": "c(\n\tperson(\"Hervé\", \"Pagès\", role=c(\"aut\", \"cre\"),\n\t\temail=\"hpages.on.github@gmail.com\"),\n\tperson(\"Jacques\", \"Serizay\", role=\"ctb\"))",
