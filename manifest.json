@@ -284,12 +284,11 @@
     },
     "GenomeInfoDbData": {
       "Source": "Bioconductor",
-      "Repository": "https://bioconductor.org/packages/3.20/data/annotation/src/contrib",
+      "Repository": "https://bioconductor.org/packages/3.18/data/annotation/src/contrib",
       "description": {
         "Package": "GenomeInfoDbData",
         "Title": "Species and taxonomy ID look up tables used by GenomeInfoDb",
         "Description": "Files for mapping between NCBI taxonomy ID and species. Used\n\tby functions in the GenomeInfoDb package.",
-        "Version": "1.2.12",
         "Author": "Bioconductor Core Team",
         "Maintainer": "Bioconductor Maintainer <maintainer@bioconductor.org>",
         "Depends": "R (>= 3.5.0)",
