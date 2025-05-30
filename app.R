@@ -49,7 +49,7 @@ ui <- fluidPage(
   useShinyjs(),
   theme = theme_custom,
   tags$head(
-    tags$style(HTML(".footer {display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding: 20px; font-weight: bold; font-size: 14px;} .about-box {margin-top: 10px; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #fdfdfd; box-shadow: 0 2px 6px rgba(0,0,0,0.05);} .dataTables_wrapper td {white-space: normal !important; word-break: break-word;} .card {margin-top: 20px;} .card-title {font-weight: bold; font-size: 18px;} .section-title {margin-top: 30px; font-size: 26px; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px;}"))
+    tags$style(HTML("body {background-color: #dbe5ff !important;}",".footer {display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding: 20px; font-weight: bold; font-size: 14px;} .about-box {margin-top: 10px; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #fdfdfd; box-shadow: 0 2px 6px rgba(0,0,0,0.05);} .dataTables_wrapper td {white-space: normal !important; word-break: break-word;} .card {margin-top: 20px;} .card-title {font-weight: bold; font-size: 18px;} .section-title {margin-top: 30px; font-size: 26px; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px;}"))
   ),
   
   fluidRow(
@@ -72,19 +72,27 @@ ui <- fluidPage(
            card(
              card_header("Upload Input Data", class = "bg-primary text-white"),
              card_body(
-               fluidRow(
+             fluidRow(
                  column(6,
                         selectInput("inputSource", "Source of count matrix:",
                                     choices = c("Select..." = "", "Salmon" = "salmon", "featureCounts" = "featureCounts", "Custom format"="custom"),
                                     width = "100%")
                  ),
-                 column(6,
-                        fileInput("countsfile", "Upload count matrix (.tsv):", accept = c(".tsv", ".txt"), width = "100%")
-                 )
+                 	column(6,
+                              uiOutput("file_input_ui")
+			      #fileInput("countsfile", "Upload count matrix (.tsv):", accept = c(".tsv", ".txt"), width = "100%",id = "upload_input")
+		  )
+                 ),
+		fluidRow(
+               	  column(6, offset = 3,
+                      actionButton("test_button", "Run Test on Example Data", 
+                                   class = "btn btn-outline-primary", 
+                                   style = "width: 100%; margin-top: 1px;"))
                ),
                tags$div(id = "info_source_help", style = "font-size: 13px; background-color: #eef7fb; padding: 8px; border-radius: 5px; margin-top: 10px;",
                         HTML("<b>Info:</b> Please choose a valid count matrix source and upload a file with gene IDs (starting with <code>ENSG</code>) in the first column.")),
-               textOutput("gene_id_error")
+               textOutput("gene_id_error"),
+               textOutput("input_format_error")
              )
            )
     )
@@ -159,7 +167,15 @@ ui <- fluidPage(
 
 # === SERVER ===
 server <- function(input, output, session) {
+	shinyjs::useShinyjs()
+	output$file_input_ui <- renderUI({
+	  fileInput("countsfile", "Upload count matrix (.tsv):", accept = c(".tsv", ".txt"), width = "100%")
+	})
 	load("data/unique_signatures.rda")
+	test_mode <- reactiveVal(FALSE)
+	counts_data <- reactiveVal(NULL)
+	custom_data <- reactiveVal(NULL)
+
   observeEvent(result(), {
     shinyjs::hide("waiting_message")
     shinyjs::show("results_section")
@@ -169,7 +185,23 @@ server <- function(input, output, session) {
 
   })
   
-  processedCounts <- reactive({
+  observeEvent(input$test_button, {
+	
+    shinyjs::hide("waiting_message")
+    shinyjs::show("results_section")
+    updateSelectInput(session, "manual_sig",
+    choices = c("Select a class..." = "",gsub("B:SAMP:subtype_","",sort(unique(unlist(unique_signatures[, 3]))[-1]))))
+    test_mode(TRUE)
+    counts <- read.table("test/test.tsv", header = TRUE, sep = "\t", check.names = FALSE)
+    gene_ids <- counts[, 1]
+    numeric_counts <- counts[, -(1:6)]
+    counts_data(list(counts = numeric_counts, gene_ids = gene_ids))
+  })
+
+  observeEvent(input$countsfile, {
+    shinyjs::enable("countsfile")
+    shinyjs::enable("inputSource")
+    test_mode(FALSE)
     req(input$inputSource != "", input$countsfile)
     counts <- read.table(input$countsfile$datapath, header = TRUE, sep = "\t", check.names = FALSE)
     gene_ids <- counts[, 1]
@@ -183,14 +215,25 @@ server <- function(input, output, session) {
                              "featureCounts" = counts[, -(1:6)],
                              "salmon" = counts[,-c(1:2)],
                              "custom" = counts[, -1])
-    list(counts = numeric_counts, gene_ids = gene_ids)
+    if(is.numeric(numeric_counts[,1])==FALSE){output$input_format_error <- renderText({ "The format of the input counts is not correct, please check documentation and try again." })
+      return(NULL)}else{output$input_format_error <- renderText({ "" })}
+    custom_data(list(counts = numeric_counts, gene_ids = gene_ids))
   })
-  
+
+   
   result <- reactive({
-    pc <- processedCounts()
+    if (test_mode()) {
+      pc <- counts_data()
+	test_mode <- reactiveVal(FALSE)
+        counts_data <- reactiveVal(NULL)
+    }else{
+     pc <- custom_data()
+	custom_data <- reactiveVal(NULL)
+    }   
     req(pc)
     counts <- pc$counts
     gene_ids <- pc$gene_ids
+    rm(pc)
     load("data/random_forest_model.rda")
     load("data/unique_signatures.rda")
 withProgress(message = "Processing input file...", value = 0, {
