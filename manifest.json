@@ -293,7 +293,7 @@
         "Maintainer": "Bioconductor Maintainer <maintainer@bioconductor.org>",
         "Depends": "R (>= 3.5.0)",
         "biocViews": "AnnotationData, Organism",
-        "Version": "1.2.9",
+        "Version": "1.2.11",
         "License": "Artistic-2.0",
         "NeedsCompilation": "no",
         "Packaged": "2024-03-21 18:53:40 UTC; lorikern",
