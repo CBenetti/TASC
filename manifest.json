@@ -596,7 +596,7 @@
     },
     "S4Vectors": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.20/bioc",
+      "Repository": "https://bioconductor.org/packages/3.18/bioc",
       "description": {
         "Package": "S4Vectors",
         "Title": "Foundation of vector-like and list-like containers in\nBioconductor",
@@ -604,7 +604,7 @@
         "biocViews": "Infrastructure, DataRepresentation",
         "URL": "https://bioconductor.org/packages/S4Vectors",
         "BugReports": "https://github.com/Bioconductor/S4Vectors/issues",
-        "Version": "0.42.1",
+        "Version": "0.40.1",
         "License": "Artistic-2.0",
         "Encoding": "UTF-8",
         "Authors@R": "c(\n\tperson(\"Hervé\", \"Pagès\", role=c(\"aut\", \"cre\"),\n\t\temail=\"hpages.on.github@gmail.com\"),\n\tperson(\"Michael\", \"Lawrence\", role=\"aut\"),\n\tperson(\"Patrick\", \"Aboyoun\", role=\"aut\"),\n\tperson(\"Aaron\", \"Lun\", role=\"ctb\"),\n\tperson(\"Beryl\", \"Kanali\", role=\"ctb\",\n\t\tcomment=\"Converted vignettes from Sweave to RMarkdown\"))",
