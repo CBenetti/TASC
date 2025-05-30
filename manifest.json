@@ -284,7 +284,7 @@
     },
     "GenomeInfoDbData": {
       "Source": "Bioconductor",
-      "Repository": "https://bioconductor.org/packages/3.18/data/annotation/src/contrib",
+      "Repository": "https://bioconductor.org/packages/3.18/data/annotation",
       "description": {
         "Package": "GenomeInfoDbData",
         "Title": "Species and taxonomy ID look up tables used by GenomeInfoDb",
