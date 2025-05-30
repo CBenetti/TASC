@@ -34,7 +34,7 @@
     },
     "Biobase": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "Biobase",
         "Title": "Biobase: Base functions for Bioconductor",
@@ -42,7 +42,7 @@
         "biocViews": "Infrastructure",
         "URL": "https://bioconductor.org/packages/Biobase",
         "BugReports": "https://github.com/Bioconductor/Biobase/issues",
-        "Version": "2.62.0",
+        "Version": "2.66.0",
         "License": "Artistic-2.0",
         "Authors@R": "c(\n    person(\"R.\", \"Gentleman\", role=\"aut\"),\n    person(\"V.\", \"Carey\", role = \"aut\"),\n    person(\"M.\", \"Morgan\", role=\"aut\"),\n    person(\"S.\", \"Falcon\", role=\"aut\"),\n    person(\"Haleema\", \"Khan\",\n        role = \"ctb\",\n        comment = \"'esApply' and 'BiobaseDevelopment' vignette translation from Sweave to Rmarkdown / HTML\"\n    ),\n    person(\"Bioconductor Package Maintainer\",\n        role = \"cre\",\n        email = \"maintainer@bioconductor.org\"\n    ))",
         "Suggests": "tools, tkWidgets, ALL, RUnit, golubEsets, BiocStyle, knitr,\nlimma",
@@ -66,7 +66,7 @@
     },
     "BiocGenerics": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "BiocGenerics",
         "Title": "S4 generic functions used in Bioconductor",
@@ -74,7 +74,7 @@
         "biocViews": "Infrastructure",
         "URL": "https://bioconductor.org/packages/BiocGenerics",
         "BugReports": "https://github.com/Bioconductor/BiocGenerics/issues",
-        "Version": "0.48.0",
+        "Version": "0.52.0",
         "License": "Artistic-2.0",
         "Encoding": "UTF-8",
         "Author": "The Bioconductor Dev Team",
@@ -596,7 +596,7 @@
     },
     "S4Vectors": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "S4Vectors",
         "Title": "Foundation of vector-like and list-like containers in\nBioconductor",
@@ -604,7 +604,7 @@
         "biocViews": "Infrastructure, DataRepresentation",
         "URL": "https://bioconductor.org/packages/S4Vectors",
         "BugReports": "https://github.com/Bioconductor/S4Vectors/issues",
-        "Version": "0.40.1",
+        "Version": "0.44.0",
         "License": "Artistic-2.0",
         "Encoding": "UTF-8",
         "Authors@R": "c(\n\tperson(\"Hervé\", \"Pagès\", role=c(\"aut\", \"cre\"),\n\t\temail=\"hpages.on.github@gmail.com\"),\n\tperson(\"Michael\", \"Lawrence\", role=\"aut\"),\n\tperson(\"Patrick\", \"Aboyoun\", role=\"aut\"),\n\tperson(\"Aaron\", \"Lun\", role=\"ctb\"),\n\tperson(\"Beryl\", \"Kanali\", role=\"ctb\",\n\t\tcomment=\"Converted vignettes from Sweave to RMarkdown\"))",
@@ -3064,12 +3064,12 @@
     },
     "zlibbioc": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.18/bioc",
+      "Repository": "https://bioconductor.org/packages/3.20/bioc",
       "description": {
         "Package": "zlibbioc",
         "Type": "Package",
         "Title": "An R packaged zlib-1.2.5",
-        "Version": "1.48.0",
+        "Version": "1.52.0",
         "Author": "Martin Morgan",
         "Maintainer": "Bioconductor Package Maintainer <maintainer@bioconductor.org>",
         "Description": "This package uses the source code of zlib-1.2.5 to create\n  libraries for systems that do not have these available via other\n  means (most Linux and Mac users should have system-level access to\n  zlib, and no direct need for this package). See the vignette for\n  instructions on use.",
