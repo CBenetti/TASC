@@ -66,7 +66,7 @@
     },
     "BiocGenerics": {
       "Source": "BioCsoft",
-      "Repository": "https://bioconductor.org/packages/3.20/bioc",
+      "Repository": "https://bioconductor.org/packages/3.18/bioc",
       "description": {
         "Package": "BiocGenerics",
         "Title": "S4 generic functions used in Bioconductor",
@@ -74,7 +74,7 @@
         "biocViews": "Infrastructure",
         "URL": "https://bioconductor.org/packages/BiocGenerics",
         "BugReports": "https://github.com/Bioconductor/BiocGenerics/issues",
-        "Version": "0.50.0",
+        "Version": "0.48.0",
         "License": "Artistic-2.0",
         "Encoding": "UTF-8",
         "Author": "The Bioconductor Dev Team",
