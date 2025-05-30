@@ -281,6 +281,8 @@ withProgress(message = "Performing gene imputation...", value = 0, {
 	theme(plot.margin = grid::unit(c(30, 10, 30, 10), "pt"))
 	}else{meta_plots[[sig]]<-sig}
     }
+	names(meta_plots)[grep("LMO2",names(meta_plots))]<-"LMO2"
+	names(meta_plots)[grep("αβ",names(meta_plots))]<-"TAL1_ab"
 	result_env$vst_data <- vst_data
 	result_env$pca_coord <- pca_coord
 	result_env$gene_ids <- rownames(vst_data)
