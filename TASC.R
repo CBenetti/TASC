@@ -223,6 +223,16 @@ withProgress(message = "Performing gene imputation...", value = 0, {
   withProgress(message = "Performing predictions...", value = 0, {  
     class_tmp <- predict(model$rf, newdata = t(vst_sub))
     class_p <- predict(model$rf, newdata = t(vst_sub),type="prob")
+res_t <- sapply(colnames(class_p), function(cl) {
+  class_p[, cl] > as.numeric(model$best_thresholds[model$best_thresholds$Subtype==cl, "threshold"])
+})
+apply(res_t,1,function(x){if(length(colnames(class_p)[x])>0){paste(c(colnames(class_p)[x]),collapse=";")}else{"NA"}})->corr
+data.frame(class=as.character(apply(class_p,1,function(x){colnames(class_p)[which.max(x)]})),probability=apply(class_p,1,function(x){x[which.max(x)]}),corrected=corr)->res_p
+res_p$satisfies_prob <- apply(res_p,1,function(x){x[2]>as.numeric(model$best_thresholds[model$best_thresholds$Subtype==x[1] ,"threshold"])})
+data.frame(class_p,res_p,check.names=F)->res_p_m
+gsub("B:SAMP:subtype_","",colnames(res_p_m))->colnames(res_p_m)
+apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x)})->res_p_m[,c("class","corrected")]
+
     colnames(class_p)<-gsub("B:SAMP:subtype_","",colnames(class_p))
     class <- class_tmp
     class[which(class_p[,grep("LMO2",colnames(class_p))]>model$threshold & class=="B:SAMP:subtype_ETP-like")]<-"B:SAMP:subtype_LMO2 γδ-like"
@@ -289,7 +299,7 @@ withProgress(message = "Performing gene imputation...", value = 0, {
     structure(list(
       class = class_corrected,
       p = p,
-      prob = class_p,
+      prob = res_p_m,
       imp = missing_genes,
       plot_data = p,
       meta_plots = meta_plots
