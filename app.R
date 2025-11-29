@@ -27,7 +27,8 @@
 	library(DT)
 	library(bslib)
 	result_env <- new.env()
-
+	Sys.setlocale("LC_ALL", "en_US.UTF-8")  # or "C.UTF-8" depending on server
+	options(encoding = "UTF-8")
 options(shiny.maxRequestSize = 200*1024^2)  # 100 MB
 
 
@@ -490,7 +491,7 @@ output$metaPlots <- renderUI({
     filename = function() paste0("class_predictions_", Sys.Date(), ".tsv"),
     content = function(file) {
       write.table(data.frame(Sample = names(result()$class), Prediction = result()$class),
-                  file, sep = "\t", row.names = FALSE, quote = FALSE)
+                  file, sep = "\t", row.names = FALSE,quote = FALSE)
     }
   )
 
