@@ -87,7 +87,7 @@ ui <- fluidPage(
     column(8, offset = 2,
            div(class = "about-box",
 	   style = "margin-top: 0px;",
-               HTML(paste0("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/wiki.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us. For rare subtypes and help interpreting the results, see our <a href='", GUIDE_URL, "' target='_blank'>interpretation guide</a>."))
+               HTML(paste0("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/QuickStart.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us. For rare subtypes and help interpreting the results, see our <a href='", GUIDE_URL, "' target='_blank'>interpretation guide</a>."))
            )
     )
   ),
@@ -200,7 +200,7 @@ ui <- fluidPage(
   
   tags$div(class = "footer",
            tags$div(HTML("Authors: <b>Cinzia Benetti</b>, <b>Omar Almolla</b>, <b>Francesco Boccalatte</b>")),
-           tags$div(tags$img(src = "images/irccs_logo.png", height = "150px"))
+           tags$div(tags$img(src = "images/inoc_logo.png", height = "100px", style = "mix-blend-mode: multiply;"))
   )
 )
 
