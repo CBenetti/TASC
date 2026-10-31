@@ -1,6 +1,5 @@
 # TASC user guide: inputs, outputs and interpretation
 
-> **DRAFT** – sections marked `[TO COMPLETE]` still need the authors' input.
 
 1. [Preparing the input](#1-preparing-the-input)
 2. [Online app or local run?](#2-online-app-or-local-run)
@@ -12,7 +11,7 @@
 
 ## 1. Preparing the input
 
-TASC takes **raw gene-level counts** (not TPM, FPKM or already-normalised values). It needs one column of gene identifiers in **Ensembl format** (`ENSG…`) and one column per sample. Version suffixes (`ENSG00000227232.5`) are removed automatically. Choose the matching option in *Source of count matrix* before uploading.
+TASC takes **raw gene-level counts** (not TPM, FPKM or already-normalised values). It needs one column of gene identifiers in **Ensembl format** (`ENSG…`) and one column per sample. Version suffixes (`ENSG00000227232.5`) are also accepted. Choose the matching option in *Source of count matrix* before uploading.
 
 ### featureCounts (`Source: featureCounts`)
 The first six columns are annotation and are skipped. Samples start from column 7.
@@ -41,7 +40,6 @@ ENSG00000157764  342       298       410
 **Notes**
 - The file must be tab-separated (`.tsv` or `.txt`).
 - Model genes that are missing from your file are **imputed** from the reference cohort. If more than 10% of model genes are imputed, or if any of the 30 most important genes are imputed, the app shows a warning. Imputation can lower subtype probabilities (see [Section 4](#4-unclassified-na-and-multiple-calls-rare-subtypes)).
-- Imputation uses a fixed random seed, so the same file always gives the same result.
 - Normalisation (DESeq2 VST) is computed across all the samples in one upload. Upload samples that were processed with the same pipeline together, and avoid mixing very different library types in one file.
 
 ## 2. Online app or local run?
@@ -55,7 +53,23 @@ To run it locally:
 # in a terminal: git clone --depth 1 https://github.com/CBenetti/TASC.git ./TASC
 shiny::runApp("path_to_TASC_repo/TASC.R")
 ```
-`TASC.R` is identical to the online app, except that the upload limit is raised to 5 GB.
+`TASC.R` is identical to the online app. Packages are downloaded into the working environment upon first use.
+### Optional: reproducible environment with conda
+
+  To match the R version used by the online TASC app (R 4.4.3), create a dedicated conda environment:
+
+  ```bash
+  conda create -n tasc -c conda-forge -c bioconda \
+    r-base=4.4.3 r-shiny r-shinyjs r-bslib r-dt r-ggplot2 r-ggrepel r-plotly r-scico \
+    r-randomforest=4.7_1.2 bioconductor-deseq2=1.44.0
+  conda activate tasc
+  ```
+
+  Then launch TASC from the cloned repository:
+
+  ```bash
+  Rscript -e 'shiny::runApp("path_to_TASC_repo/TASC.R", launch.browser = TRUE)'
+  ```
 
 ## 3. Understanding the output
 
@@ -94,7 +108,7 @@ Subtype thresholds used for `corrected`:
 | MLLT10 | 0.327 | TLX3 | 0.336 |
 | | | TME-enriched | 0.264 |
 
-**How to read them together:** `Prediction` always names a subtype. `corrected` tells you whether that call is **confident**. A sample whose `Prediction` is ETP-like but whose `corrected` is `NA` should be reported as *unclassified (closest: ETP-like)*.
+**How to read them together:** `Prediction` always names a subtype. `corrected` tells you whether that call is **confident**. A sample whose `Prediction` is ETP-like but whose `corrected` is `NA` should be reported as *low confidence call (closest: ETP-like)*.
 
 ### Other outputs
 - **Imputed gene list:** model genes that were missing from your file and were imputed.
@@ -127,8 +141,6 @@ More than one subtype passed its threshold. This happens mostly between transcri
 ### ETP-like vs LMO2 γδ-like
 These two subtypes share an immature program. TASC therefore uses a low threshold for LMO2 γδ-like (0.089), plus the override described in [Section 3](#3-understanding-the-output). An ETP-like call with a noticeable LMO2 γδ-like vote fraction is worth checking for *LMO2* rearrangements.
 
-`[TO COMPLETE: any further rare-subtype tips, e.g. SPI1 fusions in TAL/LMO2-altered cases, KMT2A-rearranged B-ALL calling KMT2A/ETP-like]`
-
 ## 5. The TASC risk score
 
 - **What it is:** a weighted combination of the 13 subtype vote fractions, after per-subtype recalibration. The weights come from a ridge-penalised Cox model of **overall survival** in the outcome-annotated patients of the reference cohort (Pölönen *et al.*, 2024). Subtypes that pushed the score up in the reference cohort include LMO2 γδ-like, TME-enriched and SPI1; MLLT10 pushes it down the most.
@@ -136,4 +148,3 @@ These two subtypes share an immature program. TASC therefore uses a low threshol
 - **It is computed for every sample, including NA calls.** The score uses the whole probability profile rather than the single call. For rare subtypes, it ranked outcomes in the expected order in the reference cohort, but less strongly (Kendall τ = 0.33).
 - **Use it together with MRD.** The score adds information to MRD rather than replacing it.
 
-`[TO COMPLETE: citation of the TASC paper and external validation once published; contact for questions]`
