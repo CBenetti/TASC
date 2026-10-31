@@ -1,5 +1,5 @@
 ### Library loading
-	cran_packages <- c("shinyjs", "ggplot2", "ggrepel", "plotly", "randomForest", "DT", "bslib")
+	cran_packages <- c("shiny", "shinyjs", "ggplot2", "scico", "ggrepel", "plotly", "randomForest", "DT", "bslib")
 	bioc_packages <- c("DESeq2")
 	install_if_missing_cran <- function(pkg) {
  		if (!requireNamespace(pkg, quietly = TRUE)) {
