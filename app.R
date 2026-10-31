@@ -30,6 +30,30 @@
 	Sys.setlocale("LC_ALL", "en_US.UTF-8")  # or "C.UTF-8" depending on server
 	options(encoding = "UTF-8")
 options(shiny.maxRequestSize = 200*1024^2)  # 100 MB
+GUIDE_URL <- "https://github.com/CBenetti/TASC/blob/main/guide.md"  # rare subtypes & interpretation guide
+
+# TASC risk score (overall survival): locked Platt recalibration + ridge-Cox coefficients + tertile cutpoints (data/risk_score_model.rds)
+tasc_risk_score <- function(class_p, risk) {
+  colnames(class_p) <- gsub("B:SAMP:subtype_", "", colnames(class_p))
+  eps <- 1e-6
+  recal <- class_p
+  for (cl in colnames(class_p)) {
+    crow <- risk$calibration[risk$calibration$subtype == cl, ]
+    if (nrow(crow) == 1) {
+      logit_p <- log((class_p[, cl] + eps) / (1 - class_p[, cl] + eps))
+      recal[, cl] <- plogis(crow$calibration_intercept + crow$calibration_slope * logit_p)
+    }
+  }
+  recal <- recal / rowSums(recal)
+  cf <- risk$coefficients[risk$coefficients$endpoint == "OS", ]
+  ct <- risk$cutpoints[risk$cutpoints$endpoint == "OS", ]
+  score <- as.numeric(recal[, cf$subtype, drop = FALSE] %*% cf$coef)
+  data.frame(Sample = rownames(class_p),
+             TASC_risk_score = round(score, 4),
+             Risk_class = as.character(cut(score, breaks = c(-Inf, ct$value[ct$bound == "low"], ct$value[ct$bound == "high"], Inf),
+                                           labels = c("Low", "Intermediate", "High"))),
+             check.names = FALSE)
+}
 
 
 # === CUSTOM THEME ===
@@ -63,7 +87,7 @@ ui <- fluidPage(
     column(8, offset = 2,
            div(class = "about-box",
 	   style = "margin-top: 0px;",
-               HTML("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/wiki.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us.")
+               HTML(paste0("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/wiki.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us. For rare subtypes and help interpreting the results, see our <a href='", GUIDE_URL, "' target='_blank'>interpretation guide</a>."))
            )
     )
   ),
@@ -132,6 +156,20 @@ ui <- fluidPage(
                )
              ),
      
+	fluidRow(
+               column(12,
+                      div(class = "section-title", "TASC Risk Score"),
+                      card(
+                        card_body(
+                          HTML(paste0("Prognostic score computed from the subtype probabilities, trained on overall survival. ",
+                                      "Risk classes use the tertile cut-points of the reference cohort (Pölönen et al., 2024). See the <a href='", GUIDE_URL, "' target='_blank'>interpretation guide</a> for details.")),
+                          br(),
+                          DTOutput("riskTable"),
+                          downloadButton("downloadRisk", "Download TASC risk scores")
+                        )
+                      )
+               )
+             ),
 	fluidRow(
                column(12,
                       div(class = "section-title", "Metagene Feature Plots"),
@@ -250,6 +288,7 @@ withProgress(message = "Processing input file...", value = 0, {
     
     if (length(missing_genes) > 0) {
 withProgress(message = "Performing gene imputation...", value = 0, {    
+      set.seed(1234)  # reproducible imputation (and risk score) across runs
       idx <- which(!gen %in% rownames(vst_data))
       sd_imput <- apply(model$original_data_matrix[model$subset_genes[idx], ], 1, sd)
       mean_imput <- apply(model$original_data_matrix[model$subset_genes[idx], ], 1, mean)
@@ -336,6 +375,8 @@ apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x
     }
 	names(meta_plots)[grep("LMO2",names(meta_plots))]<-"LMO2"
 	names(meta_plots)[grep("αβ",names(meta_plots))]<-"TAL1_ab"
+	risk_df <- tasc_risk_score(class_p, readRDS("data/risk_score_model.rds"))
+	risk_df <- data.frame(risk_df[, 1, drop = FALSE], Prediction = gsub("B:SAMP:subtype_", "", as.character(class)), risk_df[, -1], check.names = FALSE)
 	result_env$vst_data <- vst_data
 	result_env$pca_coord <- pca_coord
 	result_env$gene_ids <- rownames(vst_data)
@@ -347,7 +388,8 @@ apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x
       prob = res_p_m,
       imp = missing_genes,
       plot_data = p,
-      meta_plots = meta_plots
+      meta_plots = meta_plots,
+      risk = risk_df
     ), model_genes = model$subset_genes)
   })
   
@@ -492,6 +534,20 @@ output$metaPlots <- renderUI({
     content = function(file) {
       write.table(data.frame(Sample = names(result()$class), Prediction = result()$class),
                   file, sep = "\t", row.names = FALSE,quote = FALSE)
+    }
+  )
+
+  output$riskTable <- renderDT({
+    req(result())
+    datatable(result()$risk,
+              colnames = c("Sample", "Prediction", "TASC risk score", "Risk class"),
+              options = list(pageLength = 15), rownames = FALSE)
+  })
+
+  output$downloadRisk <- downloadHandler(
+    filename = function() paste0("TASC_risk_scores_", Sys.Date(), ".tsv"),
+    content = function(file) {
+      write.table(result()$risk, file, sep = "\t", row.names = FALSE, quote = FALSE)
     }
   )
 

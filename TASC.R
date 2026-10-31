@@ -27,8 +27,33 @@
 	library(DT)
 	library(bslib)
 	result_env <- new.env()
+	Sys.setlocale("LC_ALL", "en_US.UTF-8")  # or "C.UTF-8" depending on server
+	options(encoding = "UTF-8")
+options(shiny.maxRequestSize = 5*1024^3)  # 5 GB: local version for large datasets (online app: 200 MB)
+GUIDE_URL <- "https://github.com/CBenetti/TASC/blob/main/guide.md"  # rare subtypes & interpretation guide
 
-options(shiny.maxRequestSize = 200*1024^2)  # 100 MB
+# TASC risk score (overall survival): locked Platt recalibration + ridge-Cox coefficients + tertile cutpoints (data/risk_score_model.rds)
+tasc_risk_score <- function(class_p, risk) {
+  colnames(class_p) <- gsub("B:SAMP:subtype_", "", colnames(class_p))
+  eps <- 1e-6
+  recal <- class_p
+  for (cl in colnames(class_p)) {
+    crow <- risk$calibration[risk$calibration$subtype == cl, ]
+    if (nrow(crow) == 1) {
+      logit_p <- log((class_p[, cl] + eps) / (1 - class_p[, cl] + eps))
+      recal[, cl] <- plogis(crow$calibration_intercept + crow$calibration_slope * logit_p)
+    }
+  }
+  recal <- recal / rowSums(recal)
+  cf <- risk$coefficients[risk$coefficients$endpoint == "OS", ]
+  ct <- risk$cutpoints[risk$cutpoints$endpoint == "OS", ]
+  score <- as.numeric(recal[, cf$subtype, drop = FALSE] %*% cf$coef)
+  data.frame(Sample = rownames(class_p),
+             TASC_risk_score = round(score, 4),
+             Risk_class = as.character(cut(score, breaks = c(-Inf, ct$value[ct$bound == "low"], ct$value[ct$bound == "high"], Inf),
+                                           labels = c("Low", "Intermediate", "High"))),
+             check.names = FALSE)
+}
 
 
 # === CUSTOM THEME ===
@@ -49,7 +74,7 @@ ui <- fluidPage(
   useShinyjs(),
   theme = theme_custom,
   tags$head(
-    tags$style(HTML(".footer {display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding: 20px; font-weight: bold; font-size: 14px;} .about-box {margin-top: 10px; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #fdfdfd; box-shadow: 0 2px 6px rgba(0,0,0,0.05);} .dataTables_wrapper td {white-space: normal !important; word-break: break-word;} .card {margin-top: 20px;} .card-title {font-weight: bold; font-size: 18px;} .section-title {margin-top: 30px; font-size: 26px; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px;}"))
+    tags$style(HTML("body {background-color: #dbe5ff !important;}",".footer {display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding: 20px; font-weight: bold; font-size: 14px;} .about-box {margin-top: 10px; margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background-color: #fdfdfd; box-shadow: 0 2px 6px rgba(0,0,0,0.05);} .dataTables_wrapper td {white-space: normal !important; word-break: break-word;} .card {margin-top: 20px;} .card-title {font-weight: bold; font-size: 18px;} .section-title {margin-top: 30px; font-size: 26px; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 5px;}"))
   ),
   
   fluidRow(
@@ -62,7 +87,7 @@ ui <- fluidPage(
     column(8, offset = 2,
            div(class = "about-box",
 	   style = "margin-top: 0px;",
-               HTML("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/wiki.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us.")
+               HTML(paste0("<h4><i class='fa-solid fa-dna'></i> About TASC:</h4> TASC (T-ALL Subtype Classifier) is a user-friendly R Shiny application designed to classify T-cell acute lymphoblastic leukemia samples into molecular subtypes using RNA-seq count data. It leverages a Random Forest model trained on curated expression signatures to provide subtype predictions and feature visualizations. Visit our <a href='https://github.com/CBenetti/TASC/blob/main/wiki.md' target='_blank'>GitHub repository</a> to know more about TASC usage or to contact us. For rare subtypes and help interpreting the results, see our <a href='", GUIDE_URL, "' target='_blank'>interpretation guide</a>."))
            )
     )
   ),
@@ -72,19 +97,27 @@ ui <- fluidPage(
            card(
              card_header("Upload Input Data", class = "bg-primary text-white"),
              card_body(
-               fluidRow(
+             fluidRow(
                  column(6,
                         selectInput("inputSource", "Source of count matrix:",
                                     choices = c("Select..." = "", "Salmon" = "salmon", "featureCounts" = "featureCounts", "Custom format"="custom"),
                                     width = "100%")
                  ),
-                 column(6,
-                        fileInput("countsfile", "Upload count matrix (.tsv):", accept = c(".tsv", ".txt"), width = "100%")
-                 )
+                 	column(6,
+                              uiOutput("file_input_ui")
+			      #fileInput("countsfile", "Upload count matrix (.tsv):", accept = c(".tsv", ".txt"), width = "100%",id = "upload_input")
+		  )
+                 ),
+		fluidRow(
+               	  column(6, offset = 3,
+                      actionButton("test_button", "Run Test on Example Data", 
+                                   class = "btn btn-outline-primary", 
+                                   style = "width: 100%; margin-top: 1px;"))
                ),
                tags$div(id = "info_source_help", style = "font-size: 13px; background-color: #eef7fb; padding: 8px; border-radius: 5px; margin-top: 10px;",
                         HTML("<b>Info:</b> Please choose a valid count matrix source and upload a file with gene IDs (starting with <code>ENSG</code>) in the first column.")),
-               textOutput("gene_id_error")
+               textOutput("gene_id_error"),
+               textOutput("input_format_error")
              )
            )
     )
@@ -125,6 +158,20 @@ ui <- fluidPage(
      
 	fluidRow(
                column(12,
+                      div(class = "section-title", "TASC Risk Score"),
+                      card(
+                        card_body(
+                          HTML(paste0("Prognostic score computed from the subtype probabilities, trained on overall survival. ",
+                                      "Risk classes use the tertile cut-points of the reference cohort (Pölönen et al., 2024). See the <a href='", GUIDE_URL, "' target='_blank'>interpretation guide</a> for details.")),
+                          br(),
+                          DTOutput("riskTable"),
+                          downloadButton("downloadRisk", "Download TASC risk scores")
+                        )
+                      )
+               )
+             ),
+	fluidRow(
+               column(12,
                       div(class = "section-title", "Metagene Feature Plots"),
                       uiOutput("metaPlots"),
                       downloadButton("downloadMetaPlots", "Download Metagene Plots (PDF)")
@@ -159,7 +206,15 @@ ui <- fluidPage(
 
 # === SERVER ===
 server <- function(input, output, session) {
+	shinyjs::useShinyjs()
+	output$file_input_ui <- renderUI({
+	  fileInput("countsfile", "Upload count matrix (.tsv):", accept = c(".tsv", ".txt"), width = "100%")
+	})
 	load("data/unique_signatures.rda")
+	test_mode <- reactiveVal(FALSE)
+	counts_data <- reactiveVal(NULL)
+	custom_data <- reactiveVal(NULL)
+
   observeEvent(result(), {
     shinyjs::hide("waiting_message")
     shinyjs::show("results_section")
@@ -169,7 +224,23 @@ server <- function(input, output, session) {
 
   })
   
-  processedCounts <- reactive({
+  observeEvent(input$test_button, {
+	
+    shinyjs::hide("waiting_message")
+    shinyjs::show("results_section")
+    updateSelectInput(session, "manual_sig",
+    choices = c("Select a class..." = "",gsub("B:SAMP:subtype_","",sort(unique(unlist(unique_signatures[, 3]))[-1]))))
+    test_mode(TRUE)
+    counts <- read.table("test/test.tsv", header = TRUE, sep = "\t", check.names = FALSE)
+    gene_ids <- counts[, 1]
+    numeric_counts <- counts[, -(1:6)]
+    counts_data(list(counts = numeric_counts, gene_ids = gene_ids))
+  })
+
+  observeEvent(input$countsfile, {
+    shinyjs::enable("countsfile")
+    shinyjs::enable("inputSource")
+    test_mode(FALSE)
     req(input$inputSource != "", input$countsfile)
     counts <- read.table(input$countsfile$datapath, header = TRUE, sep = "\t", check.names = FALSE)
     gene_ids <- counts[, 1]
@@ -183,14 +254,25 @@ server <- function(input, output, session) {
                              "featureCounts" = counts[, -(1:6)],
                              "salmon" = counts[,-c(1:2)],
                              "custom" = counts[, -1])
-    list(counts = numeric_counts, gene_ids = gene_ids)
+    if(is.numeric(numeric_counts[,1])==FALSE){output$input_format_error <- renderText({ "The format of the input counts is not correct, please check documentation and try again." })
+      return(NULL)}else{output$input_format_error <- renderText({ "" })}
+    custom_data(list(counts = numeric_counts, gene_ids = gene_ids))
   })
-  
+
+   
   result <- reactive({
-    pc <- processedCounts()
+    if (test_mode()) {
+      pc <- counts_data()
+	test_mode <- reactiveVal(FALSE)
+        counts_data <- reactiveVal(NULL)
+    }else{
+     pc <- custom_data()
+	custom_data <- reactiveVal(NULL)
+    }   
     req(pc)
     counts <- pc$counts
     gene_ids <- pc$gene_ids
+    rm(pc)
     load("data/random_forest_model.rda")
     load("data/unique_signatures.rda")
 withProgress(message = "Processing input file...", value = 0, {
@@ -206,6 +288,7 @@ withProgress(message = "Processing input file...", value = 0, {
     
     if (length(missing_genes) > 0) {
 withProgress(message = "Performing gene imputation...", value = 0, {    
+      set.seed(1234)  # reproducible imputation (and risk score) across runs
       idx <- which(!gen %in% rownames(vst_data))
       sd_imput <- apply(model$original_data_matrix[model$subset_genes[idx], ], 1, sd)
       mean_imput <- apply(model$original_data_matrix[model$subset_genes[idx], ], 1, mean)
@@ -232,7 +315,6 @@ res_p$satisfies_prob <- apply(res_p,1,function(x){x[2]>as.numeric(model$best_thr
 data.frame(class_p,res_p,check.names=F)->res_p_m
 gsub("B:SAMP:subtype_","",colnames(res_p_m))->colnames(res_p_m)
 apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x)})->res_p_m[,c("class","corrected")]
-
     colnames(class_p)<-gsub("B:SAMP:subtype_","",colnames(class_p))
     class <- class_tmp
     class[which(class_p[,grep("LMO2",colnames(class_p))]>model$threshold & class=="B:SAMP:subtype_ETP-like")]<-"B:SAMP:subtype_LMO2 γδ-like"
@@ -291,6 +373,10 @@ apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x
 	theme(plot.margin = grid::unit(c(30, 10, 30, 10), "pt"))
 	}else{meta_plots[[sig]]<-sig}
     }
+	names(meta_plots)[grep("LMO2",names(meta_plots))]<-"LMO2"
+	names(meta_plots)[grep("αβ",names(meta_plots))]<-"TAL1_ab"
+	risk_df <- tasc_risk_score(class_p, readRDS("data/risk_score_model.rds"))
+	risk_df <- data.frame(risk_df[, 1, drop = FALSE], Prediction = gsub("B:SAMP:subtype_", "", as.character(class)), risk_df[, -1], check.names = FALSE)
 	result_env$vst_data <- vst_data
 	result_env$pca_coord <- pca_coord
 	result_env$gene_ids <- rownames(vst_data)
@@ -302,7 +388,8 @@ apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x
       prob = res_p_m,
       imp = missing_genes,
       plot_data = p,
-      meta_plots = meta_plots
+      meta_plots = meta_plots,
+      risk = risk_df
     ), model_genes = model$subset_genes)
   })
   
@@ -446,7 +533,21 @@ output$metaPlots <- renderUI({
     filename = function() paste0("class_predictions_", Sys.Date(), ".tsv"),
     content = function(file) {
       write.table(data.frame(Sample = names(result()$class), Prediction = result()$class),
-                  file, sep = "\t", row.names = FALSE, quote = FALSE)
+                  file, sep = "\t", row.names = FALSE,quote = FALSE)
+    }
+  )
+
+  output$riskTable <- renderDT({
+    req(result())
+    datatable(result()$risk,
+              colnames = c("Sample", "Prediction", "TASC risk score", "Risk class"),
+              options = list(pageLength = 15), rownames = FALSE)
+  })
+
+  output$downloadRisk <- downloadHandler(
+    filename = function() paste0("TASC_risk_scores_", Sys.Date(), ".tsv"),
+    content = function(file) {
+      write.table(result()$risk, file, sep = "\t", row.names = FALSE, quote = FALSE)
     }
   )
 
