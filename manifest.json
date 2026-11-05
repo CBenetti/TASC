@@ -2221,6 +2221,35 @@
         "Built": "R 4.4.2; aarch64-apple-darwin23.6.0; 2024-11-06 10:19:52 UTC; unix"
       }
     },
+    "pROC": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "pROC",
+        "Type": "Package",
+        "Title": "Display and Analyze ROC Curves",
+        "Version": "1.18.5",
+        "Date": "2023-11-01",
+        "Encoding": "UTF-8",
+        "Depends": "R (>= 2.14)",
+        "Imports": "methods, plyr, Rcpp (>= 0.11.1)",
+        "Suggests": "microbenchmark, tcltk, MASS, logcondens, doParallel,\ntestthat, vdiffr, ggplot2, rlang",
+        "LinkingTo": "Rcpp",
+        "Authors@R": "c(person(\"Xavier\", \"Robin\", role = c(\"cre\", \"aut\"),\nemail = \"pROC-cran@xavier.robin.name\",\ncomment = c(ORCID = \"0000-0002-6813-3200\")),\nperson(\"Natacha\", \"Turck\", role = \"aut\"),\nperson(\"Alexandre\", \"Hainard\", role = \"aut\"),\nperson(\"Natalia\", \"Tiberti\", role = \"aut\"),\nperson(\"Frédérique\", \"Lisacek\", role = \"aut\"),\nperson(\"Jean-Charles\", \"Sanchez\", role = \"aut\"),\nperson(\"Markus\", \"Müller\", role = \"aut\"),\nperson(\"Stefan\", \"Siegert\", role = \"ctb\",\ncomment = \"Fast DeLong code\",\nemail = \"stefan_siegert@gmx.de\"),\nperson(\"Matthias\", \"Doering\", role = \"ctb\",\ncomment = \"Hand & Till Multiclass\"),\nperson(\"Zane\", \"Billings\", role = \"ctb\",\ncomment = \"DeLong paired test CI\"))",
+        "Description": "Tools for visualizing, smoothing and comparing receiver operating characteristic (ROC curves). (Partial) area under the curve (AUC) can be compared with statistical tests based on U-statistics or bootstrap. Confidence intervals can be computed for (p)AUC or ROC curves.",
+        "License": "GPL (>= 3)",
+        "URL": "https://xrobin.github.io/pROC/",
+        "BugReports": "https://github.com/xrobin/pROC/issues",
+        "LazyData": "yes",
+        "NeedsCompilation": "yes",
+        "Packaged": "2023-11-01 09:04:05 UTC; xavier",
+        "Author": "Xavier Robin [cre, aut] (<https://orcid.org/0000-0002-6813-3200>),\nNatacha Turck [aut],\nAlexandre Hainard [aut],\nNatalia Tiberti [aut],\nFrédérique Lisacek [aut],\nJean-Charles Sanchez [aut],\nMarkus Müller [aut],\nStefan Siegert [ctb] (Fast DeLong code),\nMatthias Doering [ctb] (Hand & Till Multiclass),\nZane Billings [ctb] (DeLong paired test CI)",
+        "Maintainer": "Xavier Robin <pROC-cran@xavier.robin.name>",
+        "Repository": "CRAN",
+        "Date/Publication": "2023-11-01 17:50:13 UTC",
+        "Built": "R 4.4.2; aarch64-apple-darwin23.6.0; 2025-01-17 14:00:36 UTC; unix"
+      }
+    },
     "pillar": {
       "Source": "CRAN",
       "Repository": "https://cran.usk.ac.id",
@@ -2304,6 +2333,34 @@
         "Repository": "CRAN",
         "Date/Publication": "2024-01-13 22:40:02 UTC",
         "Built": "R 4.4.2; ; 2025-01-20 10:59:00 UTC; unix"
+      }
+    },
+    "plyr": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "plyr",
+        "Title": "Tools for Splitting, Applying and Combining Data",
+        "Version": "1.8.9",
+        "Authors@R": "person(\"Hadley\", \"Wickham\", , \"hadley@rstudio.com\", role = c(\"aut\", \"cre\"))",
+        "Description": "A set of tools that solves a common set of problems: you need\nto break a big problem down into manageable pieces, operate on each\npiece and then put all the pieces back together.  For example, you\nmight want to fit a model to each spatial location or time point in\nyour study, summarise data by panels or collapse high-dimensional\narrays to simpler summary statistics. The development of 'plyr' has\nbeen generously supported by 'Becton Dickinson'.",
+        "License": "MIT + file LICENSE",
+        "URL": "http://had.co.nz/plyr, https://github.com/hadley/plyr",
+        "BugReports": "https://github.com/hadley/plyr/issues",
+        "Depends": "R (>= 3.1.0)",
+        "Imports": "Rcpp (>= 0.11.0)",
+        "Suggests": "abind, covr, doParallel, foreach, iterators, itertools,\ntcltk, testthat",
+        "LinkingTo": "Rcpp",
+        "Encoding": "UTF-8",
+        "LazyData": "true",
+        "RoxygenNote": "7.2.3",
+        "NeedsCompilation": "yes",
+        "Packaged": "2023-09-27 13:58:04 UTC; hadleywickham",
+        "Author": "Hadley Wickham [aut, cre]",
+        "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2023-10-02 06:50:08 UTC",
+        "Built": "R 4.4.1; aarch64-apple-darwin23.4.0; 2024-10-29 18:20:09 UTC; unix"
       }
     },
     "promises": {
