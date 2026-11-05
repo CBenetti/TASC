@@ -1,5 +1,5 @@
 ### Library loading
-	cran_packages <- c("shiny", "shinyjs", "ggplot2", "scico", "ggrepel", "plotly", "randomForest", "DT", "bslib")
+	cran_packages <- c("shiny", "shinyjs", "ggplot2", "scico", "ggrepel", "plotly", "randomForest", "DT", "bslib", "pROC")
 	bioc_packages <- c("DESeq2")
 	install_if_missing_cran <- function(pkg) {
  		if (!requireNamespace(pkg, quietly = TRUE)) {
@@ -53,6 +53,38 @@ tasc_risk_score <- function(class_p, risk) {
              Risk_class = as.character(cut(score, breaks = c(-Inf, ct$value[ct$bound == "low"], ct$value[ct$bound == "high"], Inf),
                                            labels = c("Low", "Intermediate", "High"))),
              check.names = FALSE)
+}
+
+# Constrained retraining (offered when more than one model gene is missing from the input): refit TASC on the model genes
+# present in the input with the published training procedure (random forest, then weight 10 for classes with out-of-bag
+# sensitivity < 0.9 and >= 10 samples, refit), and re-derive the class thresholds on the testing set with the published rule
+# (ROC local maxima with sensitivity and specificity > 0.9, maximal specificity; Youden's index where no point qualifies).
+# With all 300 genes it reproduces the published model and thresholds exactly.
+tasc_retrain <- function(model, genes) {
+  train <- model$sample_order[model$training_set_samples]
+  test <- model$sample_order[model$testing_set_samples]
+  vst <- model$original_data_matrix
+  categories <- model$classes[train]
+  y <- factor(categories, levels = unique(categories))
+  set.seed(1)
+  rf <- randomForest(y ~ ., data = t(vst[genes, train]), proximity = TRUE)
+  sens <- sapply(levels(y), function(cl) mean(predict(rf)[y == cl] == cl))
+  small <- names(which(table(model$classes) < 10))
+  weights <- ifelse(categories %in% setdiff(names(which(sens < 0.9)), small), 10, 1)
+  set.seed(1)
+  rf <- randomForest(y ~ ., data = t(vst[genes, train]), proximity = TRUE, weights = weights, importance = TRUE)
+  prob <- predict(rf, t(vst[genes, test]), type = "prob")
+  truth <- model$classes[test]
+  thr <- do.call(rbind, lapply(colnames(prob), function(cl) {
+    roc_obj <- pROC::roc(as.numeric(truth == cl), prob[, cl], quiet = TRUE)
+    lm <- as.data.frame(pROC::coords(roc_obj, "local maximas", ret = c("threshold", "sensitivity", "specificity")))
+    best <- as.data.frame(pROC::coords(roc_obj, "best", ret = c("threshold", "sensitivity", "specificity")))[1, ]
+    ok <- lm[lm$sensitivity > 0.9 & lm$specificity > 0.9, ]
+    sel <- if (nrow(ok)) ok[ok$specificity == max(ok$specificity), ][1, ] else best
+    data.frame(Subtype = cl, threshold = sel$threshold, sensitivity = sel$sensitivity, specificity = sel$specificity,
+               AUC = as.numeric(roc_obj$auc), best = best$threshold, rule = if (nrow(ok)) "published" else "Youden")
+  }))
+  list(rf = rf, genes = genes, best_thresholds = thr)
 }
 
 
@@ -214,6 +246,10 @@ server <- function(input, output, session) {
 	test_mode <- reactiveVal(FALSE)
 	counts_data <- reactiveVal(NULL)
 	custom_data <- reactiveVal(NULL)
+	constrained <- reactiveVal(FALSE)	# TRUE: predictions from TASC retrained on the shared genes
+	result_env$retrained <- list()		# retrained models, one per shared gene set
+	observeEvent(input$retrain_btn, constrained(TRUE))
+	observeEvent(input$published_btn, constrained(FALSE))
 
   observeEvent(result(), {
     shinyjs::hide("waiting_message")
@@ -231,6 +267,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "manual_sig",
     choices = c("Select a class..." = "",gsub("B:SAMP:subtype_","",sort(unique(unlist(unique_signatures[, 3]))[-1]))))
     test_mode(TRUE)
+    constrained(FALSE)
     counts <- read.table("test/test.tsv", header = TRUE, sep = "\t", check.names = FALSE)
     gene_ids <- counts[, 1]
     numeric_counts <- counts[, -(1:6)]
@@ -241,6 +278,7 @@ server <- function(input, output, session) {
     shinyjs::enable("countsfile")
     shinyjs::enable("inputSource")
     test_mode(FALSE)
+    constrained(FALSE)
     req(input$inputSource != "", input$countsfile)
     counts <- read.table(input$countsfile$datapath, header = TRUE, sep = "\t", check.names = FALSE)
     gene_ids <- counts[, 1]
@@ -303,15 +341,31 @@ withProgress(message = "Performing gene imputation...", value = 0, {
       rownames(vst_sub) <- model$subset_genes
     }
 
+    ## published model (imputed genes) or TASC retrained on the shared genes (no imputation)
+    rf_use <- model$rf; thr_use <- model$best_thresholds; newdata <- vst_sub; retrained <- NULL
+    if (constrained() && length(missing_genes) > 1) {
+      shared <- model$subset_genes[gen %in% rownames(vst_data)]
+      key <- paste(shared, collapse = ",")
+      if (is.null(result_env$retrained[[key]])) {
+        withProgress(message = paste("Retraining TASC on", length(shared), "shared genes..."), value = 0.3, {
+          result_env$retrained[[key]] <- tasc_retrain(model, shared)
+        })
+      }
+      retrained <- result_env$retrained[[key]]
+      rf_use <- retrained$rf; thr_use <- retrained$best_thresholds
+      newdata <- vst_sub[shared, , drop = FALSE]
+    }
+
   withProgress(message = "Performing predictions...", value = 0, {  
-    class_tmp <- predict(model$rf, newdata = t(vst_sub))
-    class_p <- predict(model$rf, newdata = t(vst_sub),type="prob")
+    class_tmp <- predict(rf_use, newdata = t(newdata))
+    class_p <- predict(rf_use, newdata = t(newdata),type="prob")
+    class_p_pub <- if (is.null(retrained)) class_p else predict(model$rf, newdata = t(vst_sub), type = "prob")	# risk score: published model
 res_t <- sapply(colnames(class_p), function(cl) {
-  class_p[, cl] > as.numeric(model$best_thresholds[model$best_thresholds$Subtype==cl, "threshold"])
+  class_p[, cl] > as.numeric(thr_use[thr_use$Subtype==cl, "threshold"])
 })
 apply(res_t,1,function(x){if(length(colnames(class_p)[x])>0){paste(c(colnames(class_p)[x]),collapse=";")}else{"NA"}})->corr
 data.frame(class=as.character(apply(class_p,1,function(x){colnames(class_p)[which.max(x)]})),probability=apply(class_p,1,function(x){x[which.max(x)]}),corrected=corr)->res_p
-res_p$satisfies_prob <- apply(res_p,1,function(x){x[2]>as.numeric(model$best_thresholds[model$best_thresholds$Subtype==x[1] ,"threshold"])})
+res_p$satisfies_prob <- apply(res_p,1,function(x){x[2]>as.numeric(thr_use[thr_use$Subtype==x[1] ,"threshold"])})
 data.frame(class_p,res_p,check.names=F)->res_p_m
 gsub("B:SAMP:subtype_","",colnames(res_p_m))->colnames(res_p_m)
 apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x)})->res_p_m[,c("class","corrected")]
@@ -375,7 +429,7 @@ apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x
     }
 	names(meta_plots)[grep("LMO2",names(meta_plots))]<-"LMO2"
 	names(meta_plots)[grep("αβ",names(meta_plots))]<-"TAL1_ab"
-	risk_df <- tasc_risk_score(class_p, readRDS("data/risk_score_model.rds"))
+	risk_df <- tasc_risk_score(class_p_pub, readRDS("data/risk_score_model.rds"))
 	risk_df <- data.frame(risk_df[, 1, drop = FALSE], Prediction = gsub("B:SAMP:subtype_", "", as.character(class)), risk_df[, -1], check.names = FALSE)
 	result_env$vst_data <- vst_data
 	result_env$pca_coord <- pca_coord
@@ -389,7 +443,8 @@ apply(res_p_m[,c("class","corrected")],2,function(x){gsub("B:SAMP:subtype_","",x
       imp = missing_genes,
       plot_data = p,
       meta_plots = meta_plots,
-      risk = risk_df
+      risk = risk_df,
+      retrained = retrained
     ), model_genes = model$subset_genes)
   })
   
@@ -472,12 +527,39 @@ output$classTable <- renderDT({
 	if (length(which(imp_genes%in%top30)) > 0) {
         tags$p("⚠️ Some of the imputed genes are among the top 30 important features!",
                style = "color: darkorange; font-weight: bold; font-size: 16px;")
+        },
+        if (length(imp_genes) > 1 && is.null(res$retrained)) {
+          div(class = "alert alert-info",
+              HTML(paste0("<b>Constrained feature space:</b> instead of imputing the missing genes, TASC can be retrained on the ",
+                          total_genes - length(imp_genes), " model genes present in your data, with the same training procedure ",
+                          "and class thresholds re-derived on the testing set. Retraining takes about a minute.")),
+              br(),
+              actionButton("retrain_btn", paste("Retrain TASC on the", total_genes - length(imp_genes), "shared genes"),
+                           class = "btn btn-primary", style = "margin-top: 8px;"))
+        },
+        if (!is.null(res$retrained)) {
+          div(class = "alert alert-success",
+              HTML(paste0("<b>Predictions from TASC retrained on ", length(res$retrained$genes), " of ", total_genes,
+                          " genes</b> (no imputation; class thresholds re-derived on the testing set). ",
+                          "The TASC risk score is computed with the published model.")),
+              br(),
+              actionButton("published_btn", "Back to the published model (imputed genes)", class = "btn btn-primary", style = "margin-top: 8px; margin-right: 8px;"),
+              downloadButton("downloadRetrainedThresholds", "Download retrained thresholds", class = "btn btn-secondary", style = "margin-top: 8px;"))
         }
       )
     }
   })
   
   output$imputedGenes <- renderPrint({ result()$imp })
+
+  output$downloadRetrainedThresholds <- downloadHandler(
+    filename = function() paste0("TASC_retrained_thresholds_", Sys.Date(), ".tsv"),
+    content = function(file) {
+      thr <- result()$retrained$best_thresholds
+      thr$Subtype <- gsub("B:SAMP:subtype_", "", thr$Subtype)
+      write.table(thr, file, sep = "\t", row.names = FALSE, quote = FALSE)
+    }
+  )
   
 output$metaPlots <- renderUI({
     req(result()$meta_plots)          # do nothing until meta_plots is non-NULL
@@ -552,7 +634,7 @@ output$metaPlots <- renderUI({
   )
 
   output$downloadProbabilities <- downloadHandler(
-    filename = function() paste0("full_probability_matrix", Sys.Date(), ".tsv"),
+    filename = function() paste0("full_probability_matrix", if (!is.null(result()$retrained)) "_retrained", Sys.Date(), ".tsv"),
     content = function(file) {
       write.table(as.data.frame(result()$prob),
                   file, sep = "\t", row.names = TRUE, col.names=NA, quote = FALSE)

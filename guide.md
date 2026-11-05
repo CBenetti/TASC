@@ -39,7 +39,7 @@ ENSG00000157764  342       298       410
 
 **Notes**
 - The file must be tab-separated (`.tsv` or `.txt`).
-- Model genes that are missing from your file are **imputed** from the reference cohort. If more than 10% of model genes are imputed, or if any of the 30 most important genes are imputed, the app shows a warning. Imputation can lower subtype probabilities (see [Section 4](#4-unclassified-na-and-multiple-calls-rare-subtypes)).
+- Model genes that are missing from your file are **imputed** from the reference cohort. If more than 10% of model genes are imputed, or if any of the 30 most important genes are imputed, the app shows a warning. Imputation can lower subtype probabilities (see [Section 4](#4-unclassified-na-and-multiple-calls-rare-subtypes)). If more than one gene is imputed, you can retrain TASC on the genes your file shares with the model instead (see [Retraining on the shared genes](#retraining-on-the-shared-genes)).
 - Normalisation (DESeq2 VST) is computed across all the samples in one upload. Upload samples that were processed with the same pipeline together, and avoid mixing very different library types in one file.
 
 ## 2. Online app or local run?
@@ -60,7 +60,7 @@ shiny::runApp("path_to_TASC_repo/TASC.R")
 
   ```bash
   conda create -n tasc -c conda-forge -c bioconda \
-    r-base=4.4.3 r-shiny r-shinyjs r-bslib r-dt r-ggplot2 r-ggrepel r-plotly r-scico \
+    r-base=4.4.3 r-shiny r-shinyjs r-bslib r-dt r-ggplot2 r-ggrepel r-plotly r-scico r-proc \
     r-randomforest=4.7_1.2 bioconductor-deseq2=1.44.0
   conda activate tasc
   ```
@@ -112,8 +112,21 @@ Subtype thresholds used for `corrected`:
 
 ### Other outputs
 - **Imputed gene list:** model genes that were missing from your file and were imputed.
+- **Retrained thresholds (download):** only after retraining; see below.
 - **PCA plot:** samples in your upload, coloured by `Prediction`.
 - **Metagene feature plots:** mean expression of each predicted subtype's signature genes. Signature genes are **not** imputed, so a plot is skipped if too few signature genes are present. *Explore Signature on Demand* lets you check any subtype's signature, which is useful for NA samples.
+
+### Retraining on the shared genes
+When more than one model gene is missing from your file, the app offers a second option under the imputation message: **Retrain TASC on the N shared genes**. Instead of imputing the missing genes, TASC is refitted on the reference cohort using only the genes present in your file.
+
+- **How it is retrained:** same training samples, same procedure and same random seed as the published model (Random Forest, with weight 10 for the subtypes that the unweighted model misses). Retraining takes from a few seconds to about a minute, and the model is kept for the session, so switching back and forth does not refit it.
+- **Thresholds:** new subtype thresholds are recomputed on the reference test set with the same rule as the published ones (sensitivity and specificity >90%, maximal specificity). If no cut-off meets that rule for a subtype, the Youden cut-off is used instead; the `rule` column of the download tells you which one was applied.
+- **What changes:** `Prediction`, the probability table, `corrected`, `satisfies_prob` and the PCA colours come from the retrained model. The downloaded probability matrix has `_retrained` in its file name. The LMO2 γδ-like override (0.286) is unchanged.
+- **What does not change:** the **TASC risk score** and risk class are always computed from the published model, because the risk weights were fitted on its vote fractions.
+- **Retrained thresholds (download):** one row per subtype, with `threshold`, the `sensitivity` and `specificity` at that threshold on the reference test set, `AUC`, the Youden cut-off (`best`) and `rule`.
+- **Going back:** *Back to the published model (imputed genes)* restores the published predictions. Uploading a new file or running the test data also resets to the published model.
+
+**Which one to report?** The published model is the one validated in the paper, so report it by default. Retraining is most useful when many genes are imputed, or when an important gene is missing: compare the two, and treat a sample as robust if both give the same call. With all 300 genes present, retraining reproduces the published model exactly.
 
 ## 4. Unclassified (NA) and multiple calls: rare subtypes
 
@@ -131,7 +144,7 @@ What TASC reports for the 27 rare-subtype samples of the reference cohort (publi
 ### When you get `NA`
 Possible reasons, roughly from most to least common:
 1. **Rare subtype not in the model.** Check the top two vote fractions and the metagene plots. Confirm with fusion detection or genomic analysis (e.g. *NUP214*, *NUP98*, *NKX2-5* or *STAG2::LMO2* rearrangements).
-2. **Heavy imputation.** Probabilities fall when many genes are imputed, especially for ETP-like and LMO2 γδ-like. If the app shows an imputation warning, re-quantify with a full annotation if you can.
+2. **Heavy imputation.** Probabilities fall when many genes are imputed, especially for ETP-like and LMO2 γδ-like. If the app shows an imputation warning, re-quantify with a full annotation if you can, or compare with the retrained model ([Section 3](#retraining-on-the-shared-genes)).
 3. **Low blast content or a non-T-ALL sample.** In 499 B-ALL samples, almost all calls were NA under the published thresholds. A sample dominated by normal cells can also fall below every threshold.
 4. **Transitional or mixed state**, e.g. a relapse that changed subtype, or a sample with two leukaemic populations. Compare with the matched diagnosis sample if available.
 
